@@ -1,2 +1,2 @@
-export declare const shortnerRouter: import("express-serve-static-core").Router;
+export declare const shortnerRouter: any;
 //# sourceMappingURL=shortner.routes.d.ts.map
