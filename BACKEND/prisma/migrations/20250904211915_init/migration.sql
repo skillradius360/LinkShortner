@@ -10,9 +10,6 @@ CREATE TABLE "public"."LinkTable" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "LinkTable_mainLink_key" ON "public"."LinkTable"("mainLink");
-
--- CreateIndex
 CREATE UNIQUE INDEX "LinkTable_generatedLink_key" ON "public"."LinkTable"("generatedLink");
 
 -- CreateIndex
