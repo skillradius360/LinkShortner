@@ -1,17 +1,21 @@
 import { Context } from 'hono'
-import {client} from "./db/prisma.db.js"
+// import {client} from "./db/prisma.db.js"
 import {z} from "zod"
 
 import {Hono} from "hono"
 const app = new Hono()
+
+import {PrismaClient} from "@prisma/client/edge"
+import { withAccelerate } from "@prisma/extension-accelerate"
+
+export const client = new PrismaClient().$extends(withAccelerate())
 
 
 enum codes{
   Error=400,
   AllOk=200
 }
-app.post("/shorten",shortenURI)
-app.get("/health",health)
+
 
 function generateRandomString(length = 8) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -35,38 +39,38 @@ async function health(c:Context){
 }
 
 async function shortenURI(c: Context) {
-  try {
+  // try {
     // Parse request body
     const body = await c.req.json()
-
     // Validation
     const validation = z.object({
       originalUrl: z.string().url(), // ensure it's a proper URL
       length: z.number().optional()
     })
-
+    
     const parsed = validation.safeParse(body)
-
+    
     if (!parsed.success) {
       return c.json({ msg: "Please provide full URI" }, codes.Error)
     }
-
+    
     // Generate UUID
     const generateUUID = await generateRandomString(parsed.data.length ?? 8)
-
+    
     if (!generateUUID) {
       return c.json({ msg: "UUID generation failure" }, codes.Error)
     }
-
+    
     // Create DB record
     const createRecord = await client.linkTable.create({
       data: {
         mainLink: parsed.data.originalUrl,
-        generatedLink: `http://localhost:8000/process/validate/${generateUUID}/`,
+        generatedLink: `https://backend.syncmaster420l.workers.dev/validate/${generateUUID}/`,
         generatedUuid: generateUUID
       }
     })
-
+    console.log(createRecord)
+    
     if (!createRecord) {
       return c.json({ msg: "Record creation failure" }, codes.Error)
     }
@@ -75,9 +79,9 @@ async function shortenURI(c: Context) {
       { msg: "URL created successfully", createRecord },
       codes.AllOk
     )
-  } catch (err) {
-    return c.json({ msg: "Internal server error" }, 500)
-  }
+  // } catch (err) {
+  //   return c.json({ msg: "Internal server error" }, 500)
+  // }
 }
     
     async function redirector (c:Context) {
@@ -104,8 +108,12 @@ async function shortenURI(c: Context) {
     //     generatedLink:data.generatedLink })
 
 }
+
+app.post("/shorten",shortenURI)
+app.get("/health",health)
+
 export {shortenURI,redirector}
 
 
-export default {app,shortenURI,redirector}
+export default app
 
