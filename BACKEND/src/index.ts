@@ -16,6 +16,13 @@ enum codes{
   AllOk=200
 }
 
+interface dbStruct {
+      id:Number,
+      mainLink:String,
+      generatedLink:String,
+      generatedUuid:String,
+      visitedTypes:Number
+    }
 
 function generateRandomString(length = 8) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -86,31 +93,65 @@ async function shortenURI(c: Context) {
     
     async function redirector (c:Context) {
     
-        const paramsValidator = z.object({path:z.string()})
-      const params = await c.req.param
+    const paramsValidator = z.object({path:z.string()})
+      const params = await c.req.param()
+   
     const parsedValue = paramsValidator.safeParse(params)
-
     if(!parsedValue.success){
         return c.json({"msg":"url invalid"},codes.Error)
     }
     
-    const data = await client.linkTable.findUnique({
+    const data= await client.linkTable.findUnique({
         where:{
             generatedUuid:parsedValue.data?.path
         }
     })
     
+    const updateVisits = await client.linkTable.update({
+      where:{
+        id:data?.id
+      },
+      data:{
+        visitedTypes:{increment:1}
+      }
+    })
+
     if (!data){
         return c.json({"msg":"Cannot find the url"},codes.Error)
     }
-    c.redirect(data.mainLink)
+    return c.redirect(data.mainLink)
     // return c.status(codes.AllOk).json({"msg":"URL created successfully",
     //     generatedLink:data.generatedLink })
+}
 
+async function getStats(c:Context){
+const paramsValidator = z.object({path:z.string()})
+      const params = await c.req.param()
+
+    const parsedValue = paramsValidator.safeParse(params)
+    if(!parsedValue.success){
+        return c.json({"msg":"url invalid"},codes.Error)
+    }
+    
+    const data= await client.linkTable.findUnique({
+        where:{
+            generatedUuid:parsedValue.data?.path
+        }
+    })
+
+
+    if (!data){
+        return c.json({"msg":"Cannot find the url"},codes.Error)
+    }
+
+return c.json({"msg":"URL created successfully",
+        data}) 
 }
 
 app.post("/shorten",shortenURI)
 app.get("/health",health)
+app.get("/validate/:path",redirector)
+app.get("/stats/:path",getStats)
 
 export {shortenURI,redirector}
 
